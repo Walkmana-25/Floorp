@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-import { Show, createEffect, on } from "solid-js";
+import { createEffect, on, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import i18next from "i18next";
 import { commandPaletteService } from "../service.ts";
@@ -44,7 +44,9 @@ export function CommandPaletteUI() {
 
   const handleChoiceSelect = (choice: CommandStepChoice) => {
     // Ensure selectedChoiceIndex is set to the clicked choice's index
-    const idx = state.filteredStepChoices().findIndex((c) => c.value === choice.value);
+    const idx = state.filteredStepChoices().findIndex((c) =>
+      c.value === choice.value
+    );
     if (idx >= 0) state.setSelectedChoiceIndex(idx);
     state.setQuery(choice.label);
     controller.advanceStep();
@@ -122,7 +124,7 @@ export function CommandPaletteUI() {
               state={state}
             />
             <Show when={state.mode() === "input"}>
-              <StepIndicator state={state} />
+              <StepIndicator state={state} controller={controller} />
               <Show when={state.stepError()}>
                 {(error) => (
                   <div class="command-palette-step-error">{error()}</div>

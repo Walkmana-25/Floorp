@@ -12,6 +12,7 @@ import { PROGRESS_LISTENERS } from "./shared/ProgressListeners.sys.mts";
 import { waitForActor } from "./shared/waitForActor.sys.mts";
 import { CookieHelper } from "./shared/CookieHelper.sys.mts";
 import { NetworkIdleHelper } from "./shared/NetworkIdleHelper.sys.mts";
+import { prepareUploadFile } from "./shared/UploadFileReader.sys.mts";
 
 const { setTimeout, clearTimeout } = ChromeUtils.importESModule(
   "resource://gre/modules/Timer.sys.mjs",
@@ -25,6 +26,7 @@ interface WebScraperActor {
 // Type for browser tab element
 interface BrowserTab {
   linkedBrowser: XULBrowserElement & { browserId: number };
+  readonly isConnected: boolean;
   label: string;
   selected: boolean;
   pinned: boolean;
@@ -82,21 +84,34 @@ interface TabInstanceInfo {
 // Global sets to prevent garbage collection of active components
 const TAB_MANAGER_ACTOR_SETS: Set<XULBrowserElement> = new Set();
 
+function isWebPanelWindow(win: Window): boolean {
+  if (
+    (win as Window & { floorpWebPanelWindow?: boolean }).floorpWebPanelWindow
+  ) {
+    return true;
+  }
+
+  try {
+    return new URL(win.location.href).searchParams.has("floorpWebPanelId");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A utility function to get the most recent browser window.
  * @returns The browser window.
  */
 function getBrowserWindow() {
-  // Panel windows (floorpWebPanelId) are navigator:browser windows but don't
-  // have gBrowser initialized (browser-init.patch skips init for them).
-  // Enumerate all windows and return the first one with gBrowser defined.
+  // An embedded web panel now has its own gBrowser so WebExtensions can attach
+  // to its content. It must not become the primary OS automation window.
   try {
     const enumerator = Services.wm.getEnumerator(
       "navigator:browser",
     ) as nsISimpleEnumerator;
     while (enumerator?.hasMoreElements?.()) {
       const win = enumerator.getNext() as Window & { gBrowser: GBrowser };
-      if (win && !win.closed && win.gBrowser) {
+      if (win && !win.closed && win.gBrowser && !isWebPanelWindow(win)) {
         return win;
       }
     }
@@ -117,8 +132,7 @@ function getBrowserWindows(): Array<Window & { gBrowser: GBrowser }> {
     ) as nsISimpleEnumerator;
     while (enumerator?.hasMoreElements?.()) {
       const win = enumerator.getNext() as Window & { gBrowser: GBrowser };
-      // Skip panel windows (floorpWebPanelId) — they don't have gBrowser.
-      if (win && !win.closed && win.gBrowser) {
+      if (win && !win.closed && win.gBrowser && !isWebPanelWindow(win)) {
         windows.push(win);
       }
     }
@@ -178,6 +192,7 @@ class TabManager {
             "load",
             () => {
               if (
+                !isWebPanelWindow(win) &&
                 (win as unknown as { gBrowser?: GBrowser }).gBrowser
                   ?.tabContainer
               ) {
@@ -355,10 +370,9 @@ class TabManager {
         return;
       }
 
-      const win =
-        (entry.browser.ownerGlobal as
-          | (Window & { gBrowser: GBrowser })
-          | null) ?? (getBrowserWindow() as Window & { gBrowser: GBrowser });
+      const win = (entry.browser.ownerGlobal as
+        | (Window & { gBrowser: GBrowser })
+        | null) ?? (getBrowserWindow() as Window & { gBrowser: GBrowser });
       if (win.closed) {
         return;
       }
@@ -430,10 +444,12 @@ class TabManager {
                 selector: sel,
                 timeout: to,
               });
-            if (!ok)
+            if (!ok) {
               ok = (await tryWait("body", 5000).catch(() => false)) as boolean;
-            if (!ok)
+            }
+            if (!ok) {
               ok = (await tryWait("html", 3000).catch(() => false)) as boolean;
+            }
             if (!ok) await tryWait("main", 3000).catch(() => false);
           }
         } catch {
@@ -671,8 +687,7 @@ class TabManager {
     instanceId: string,
   ): Promise<TabInstanceInfo | null> {
     const { tab, browser } = this._getInstance(instanceId);
-    const win =
-      (browser.ownerGlobal as Window & { gBrowser: GBrowser }) ??
+    const win = (browser.ownerGlobal as Window & { gBrowser: GBrowser }) ??
       (getBrowserWindow() as Window & { gBrowser: GBrowser });
     const gBrowser = win?.gBrowser;
     if (!gBrowser) {
@@ -1064,12 +1079,16 @@ class TabManager {
     filePath: string,
   ): Promise<boolean | null> {
     this._focusInstance(instanceId);
+    const upload = await prepareUploadFile(filePath);
+    if (!upload) {
+      return false;
+    }
     const result = await this._queryActor<boolean>(
       instanceId,
       "WebScraper:UploadFile",
       {
         selector,
-        filePath,
+        ...upload,
       },
     );
     return result;
@@ -1389,8 +1408,8 @@ class TabManager {
           const tabDialogBox = gBrowser.getTabDialogBox(entry.tab);
           const dialogs = tabDialogBox?.getTabDialogManager?.()?.dialogs ?? [];
           for (const dialog of dialogs) {
-            const dialogElement =
-              dialog.frameContentWindow?.document?.querySelector(
+            const dialogElement = dialog.frameContentWindow?.document
+              ?.querySelector(
                 "dialog",
               ) as HTMLDialogElement | null;
             if (dialogElement) {
@@ -1445,8 +1464,8 @@ class TabManager {
           const tabDialogBox = gBrowser.getTabDialogBox(entry.tab);
           const dialogs = tabDialogBox?.getTabDialogManager?.()?.dialogs ?? [];
           for (const dialog of dialogs) {
-            const dialogElement =
-              dialog.frameContentWindow?.document?.querySelector(
+            const dialogElement = dialog.frameContentWindow?.document
+              ?.querySelector(
                 "dialog",
               ) as HTMLDialogElement | null;
             if (dialogElement) {
@@ -1485,8 +1504,8 @@ class TabManager {
     try {
       const browsingContext = entry.browser
         .browsingContext as BrowsingContext & {
-        print(settings: nsIPrintSettings): Promise<void>;
-      };
+          print(settings: nsIPrintSettings): Promise<void>;
+        };
       if (!browsingContext) return null;
 
       // Create a storage stream for PDF output
@@ -1711,14 +1730,24 @@ class TabManager {
   public evaluate(
     instanceId: string,
     script: string,
-  ): Promise<{ success: boolean; result?: unknown; resultType?: string; error?: string; errorType?: string } | null> {
-    return this._queryActor<{
+  ): Promise<
+    {
       success: boolean;
       result?: unknown;
       resultType?: string;
       error?: string;
       errorType?: string;
-    } | null>(
+    } | null
+  > {
+    return this._queryActor<
+      {
+        success: boolean;
+        result?: unknown;
+        resultType?: string;
+        error?: string;
+        errorType?: string;
+      } | null
+    >(
       instanceId,
       "WebScraper:Evaluate",
       { script },

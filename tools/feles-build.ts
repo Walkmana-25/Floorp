@@ -2,6 +2,7 @@
 
 import * as Initializer from "./src/initializer.ts";
 import * as Patcher from "./src/patcher.ts";
+import * as CustomAppIcons from "./src/custom_app_icons.ts";
 import * as Pref from "../static/gecko/pref/pref.ts";
 import * as Symlinker from "./src/symlinker.ts";
 import * as Update from "./src/update.ts";
@@ -53,7 +54,10 @@ async function runDev(): Promise<void> {
   logger.info("Starting development environment...");
 
   // Initial setup
-  await Initializer.run();
+  // The canonical lock points at the PGO/Release channel. Dev requires the
+  // separate Debug Runtime published to the Runtime FTP channel.
+  await Initializer.run({ distribution: "debug" });
+  CustomAppIcons.run();
   Patcher.run("apply");
   Pref.run();
   Symlinker.run();
@@ -117,6 +121,7 @@ async function runStage(options: { marionette?: boolean } = {}): Promise<void> {
 
   // Initial setup
   await Initializer.run();
+  CustomAppIcons.run();
   Patcher.run("apply");
   Pref.run();
   Symlinker.run();
@@ -176,6 +181,7 @@ async function runTest(): Promise<void> {
 
   // Initial setup
   await Initializer.run();
+  CustomAppIcons.run();
   Patcher.run("apply");
   Pref.run();
   Symlinker.run();

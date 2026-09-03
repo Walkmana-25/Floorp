@@ -63,7 +63,7 @@ export const applyWorkspaceModalResult = (
 };
 
 const { ContextualIdentityService } = ChromeUtils.importESModule(
-  "resource://gre/modules/ContextualIdentityService.sys.mjs",
+  "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
 );
 
 type Container = {
@@ -205,7 +205,7 @@ export class WorkspaceManageModal {
     return await new Promise((resolve) => {
       this.modalParent.showNoraModal(formConfig, {
         width: 540,
-        height: 500,
+        height: 700,
       }, (result: TFormResult | null) => resolve(result));
     });
   }

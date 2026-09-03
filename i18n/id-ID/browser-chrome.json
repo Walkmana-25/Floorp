@@ -516,6 +516,10 @@
     "stepIndicator": "Langkah {{current}} dari {{total}}",
     "backToCommands": "Kembali ke perintah",
     "openUrl": "Buka URL",
+    "openUrlContainerStepLabel": "Buka dalam kontainer",
+    "openUrlContainerStepPlaceholder": "Pilih kontainer...",
+    "openUrlContainerWorkspaceDefault": "Workspace Default",
+    "openUrlContainerWorkspaceDefaultDesc": "Uses the workspace's default context",
     "openUrlDescription": "Buka URL di tab baru",
     "openUrlStepLabel": "Masukkan URL",
     "openUrlStepPlaceholder": "https://contoh.com",
@@ -580,7 +584,17 @@
     "bookmarkSwitcher": "Switch Bookmark",
     "bookmarkSwitcherDescription": "Open a bookmarked page",
     "bookmarkSwitcherStepLabel": "Select a bookmark",
-    "bookmarkSwitcherStepPlaceholder": "Search or choose a bookmark..."
+    "bookmarkSwitcherStepPlaceholder": "Search or choose a bookmark...",
+    "bookmarkSwitcherContainerStepLabel": "Buka dalam kontainer",
+    "bookmarkSwitcherContainerStepPlaceholder": "Pilih kontainer...",
+    "bookmarkSwitcherWhereBackgroundTab": "Tab Latar Belakang",
+    "bookmarkSwitcherWhereBackgroundTabDesc": "Buka di tab latar belakang baru",
+    "bookmarkSwitcherWhereCurrentTab": "Tab Saat Ini",
+    "bookmarkSwitcherWhereCurrentTabDesc": "Navigate the current tab",
+    "bookmarkSwitcherWhereLabel": "Where to open",
+    "bookmarkSwitcherWhereNewTab": "Tab Baru",
+    "bookmarkSwitcherWhereNewTabDesc": "Open in a new foreground tab",
+    "bookmarkSwitcherWherePlaceholder": "Select where to open..."
   },
   "commandPaletteReadings": {}
 }
