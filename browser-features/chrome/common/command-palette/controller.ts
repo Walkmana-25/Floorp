@@ -374,9 +374,29 @@ export class CommandPaletteController {
   private bookmarkSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private currentSearchQuery: string = "";
   private stepChoicesLoadGeneration = 0;
+  private searchGeneration = 0;
 
   public hidePalette(): void {
     this.stepChoicesLoadGeneration++;
+    // Invalidate any in-flight deferred bookmark/history search: its result
+    // callback checks `query !== this.currentSearchQuery` and must drop the
+    // stale result now that the palette is hidden.
+    this.currentSearchQuery = "";
+    // Monotonic guard: hide -> reopen -> re-type the SAME query would otherwise
+    // pass the `query !== this.currentSearchQuery` check and apply a stale
+    // result from the previous lifecycle. Compare against this generation too.
+    this.searchGeneration++;
+    // Drop bookmark/history suggestion rows that a deferred Places lookup
+    // already applied during this (now closing) lifecycle: the generation
+    // guard above only covers lookups still in flight, so rows appended
+    // before hidePalette() would otherwise leak into the reopened list.
+    this.state.setFilteredCommands(
+      this.state.filteredCommands().filter(
+        (c) =>
+          c.category !== "bookmark-suggestions" &&
+          c.category !== "history-suggestions",
+      ),
+    );
     this.state.setIsAnimatingOut(true);
     this.state.setIsVisible(false);
     this.debouncedUpdateSearch.clear();
@@ -1596,6 +1616,7 @@ export class CommandPaletteController {
         // can still use @b/@h for explicit searches (same rationale as @t
         // ignoring the `showTabs` pref, documented above).
         this.currentSearchQuery = trimmed;
+        const generation = this.searchGeneration;
         if (this.historySearchTimer) {
           clearTimeout(this.historySearchTimer);
           this.historySearchTimer = null;
@@ -1631,8 +1652,10 @@ export class CommandPaletteController {
               e,
             );
           }
-          // Only apply if the query hasn't changed since we started.
+          // Only apply if the query hasn't changed since we started and the
+          // search belongs to the current palette lifecycle.
           if (trimmed !== this.currentSearchQuery) return;
+          if (generation !== this.searchGeneration) return;
           this.appendSuggestionResults(suggestions, getCategoryPriority());
         };
 
@@ -1813,6 +1836,7 @@ export class CommandPaletteController {
 
     // Debounced async history and bookmark search
     this.currentSearchQuery = trimmed;
+    const generation = this.searchGeneration;
     if (this.historySearchTimer) {
       clearTimeout(this.historySearchTimer);
       this.historySearchTimer = null;
@@ -1829,39 +1853,49 @@ export class CommandPaletteController {
     if (trimmed && !trimmed.startsWith("@") && !shareModeEnabled()) {
       if (getShowBookmarks()) {
         this.bookmarkSearchTimer = setTimeout(() => {
-          this.performBookmarkSearch(trimmed);
+          void this.performBookmarkSearch(trimmed, generation);
         }, 100);
       }
       if (getShowHistory()) {
         this.historySearchTimer = setTimeout(() => {
-          this.performHistorySearch(trimmed);
+          void this.performHistorySearch(trimmed, generation);
         }, 200);
       }
     }
   }
 
-  private async performHistorySearch(query: string): Promise<void> {
+  private async performHistorySearch(
+    query: string,
+    generation: number,
+  ): Promise<void> {
     try {
       const results = await searchHistoryCommands(
         query,
         getMaxHistorySuggestions(),
       );
-      // Only apply if query hasn't changed since we started
+      // Only apply if query hasn't changed since we started and the search
+      // belongs to the current palette lifecycle.
       if (query !== this.currentSearchQuery) return;
+      if (generation !== this.searchGeneration) return;
       this.appendSuggestionResults(results, getCategoryPriority());
     } catch (e) {
       console.error("[command-palette] History search failed:", e);
     }
   }
 
-  private async performBookmarkSearch(query: string): Promise<void> {
+  private async performBookmarkSearch(
+    query: string,
+    generation: number,
+  ): Promise<void> {
     try {
       const results = await searchBookmarkCommands(
         query,
         getMaxBookmarkSuggestions(),
       );
-      // Only apply if query hasn't changed since we started
+      // Only apply if query hasn't changed since we started and the search
+      // belongs to the current palette lifecycle.
       if (query !== this.currentSearchQuery) return;
+      if (generation !== this.searchGeneration) return;
       this.appendSuggestionResults(results, getCategoryPriority());
     } catch (e) {
       console.error("[command-palette] Bookmark search failed:", e);

@@ -440,7 +440,14 @@ export function parseShortcuts(
   if (!Array.isArray(parsed) || !parsed.every(isCommandPaletteShortcut)) {
     return [];
   }
-  return parsed;
+  // Dedupe by prefix, retaining the first occurrence of each prefix so
+  // ShortcutList keys stay unique and handleRemove cannot hit duplicates.
+  const seen = new Set<string>();
+  return parsed.filter((entry) => {
+    if (seen.has(entry.prefix)) return false;
+    seen.add(entry.prefix);
+    return true;
+  });
 }
 
 /**

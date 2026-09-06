@@ -406,6 +406,27 @@ function testParseShortcutsNumericCommandIdRejectsAll(): void {
 }
 
 /**
+ * Verifies duplicate prefixes are deduped: only the first occurrence of each
+ * prefix survives.
+ */
+function testParseShortcutsDedupesByPrefix(): void {
+  const input = JSON.stringify([
+    { prefix: "gh", commandId: "first" },
+    { prefix: "gh", commandId: "second" },
+    { prefix: "fb", commandId: "feedback" },
+    { prefix: "fb", commandId: "other" },
+    { prefix: "zz", commandId: "unique" },
+  ]);
+  const result = parseShortcuts(input, SHORTCUTS_DEFAULT);
+  assertEquals(result.length, 3, "duplicate prefixes should be deduped");
+  assertEquals(result[0].prefix, "gh", "first 'gh' entry is retained");
+  assertEquals(result[0].commandId, "first", "first occurrence wins");
+  assertEquals(result[1].prefix, "fb", "first 'fb' entry is retained");
+  assertEquals(result[1].commandId, "feedback", "first occurrence wins");
+  assertEquals(result[2].prefix, "zz", "unique entry is kept");
+}
+
+/**
  * Verifies the defaultVal argument propagates: a distinct default is returned
  * verbatim on rejection (so callers can pass [] vs a non-empty fallback and
  * observe the difference).
@@ -587,6 +608,7 @@ const tests: TestCase[] = [
   { name: "parseShortcuts rejects whole array when commandId is missing", fn: testParseShortcutsMissingCommandIdRejectsAll },
   { name: "parseShortcuts rejects whole array when commandId is numeric", fn: testParseShortcutsNumericCommandIdRejectsAll },
   { name: "parseShortcuts propagates a custom defaultVal", fn: testParseShortcutsDefaultValPropagates },
+  { name: "parseShortcuts dedupes duplicate prefixes (first wins)", fn: testParseShortcutsDedupesByPrefix },
   { name: "parseShortcuts honors an empty defaultVal", fn: testParseShortcutsEmptyDefaultHonored },
   // parseSelectableCommands
   { name: "parseSelectableCommands returns valid two-element array", fn: testParseSelectableCommandsValidArray },

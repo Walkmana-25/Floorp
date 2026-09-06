@@ -987,6 +987,25 @@ function testParseShortcutsMissingCommandId(): void {
   assertEquals(result.length, 0, "missing commandId should return []");
 }
 
+/** Duplicate prefixes are deduped: only the first occurrence of each survives. */
+function testParseShortcutsDedupesByPrefix(): void {
+  const result = parseShortcuts(
+    JSON.stringify([
+      { prefix: "gh", commandId: "first" },
+      { prefix: "gh", commandId: "second" },
+      { prefix: "fb", commandId: "feedback" },
+      { prefix: "fb", commandId: "other" },
+      { prefix: "zz", commandId: "unique" },
+    ]),
+  );
+  assertEquals(result.length, 3, "duplicate prefixes should be deduped");
+  assertEquals(result[0].prefix, "gh", "first 'gh' entry is retained");
+  assertEquals(result[0].commandId, "first", "first occurrence wins");
+  assertEquals(result[1].prefix, "fb", "first 'fb' entry is retained");
+  assertEquals(result[1].commandId, "feedback", "first occurrence wins");
+  assertEquals(result[2].prefix, "zz", "unique entry is kept");
+}
+
 // ---------------------------------------------------------------------------
 // parseSelectableCommands — fallback to [] on malformed input
 // ---------------------------------------------------------------------------
@@ -1186,6 +1205,7 @@ const tests: TestCase[] = [
   { name: "parseShortcuts: non-object element → []", fn: testParseShortcutsNonObjectElement },
   { name: "parseShortcuts: numeric prefix → []", fn: testParseShortcutsNumericPrefix },
   { name: "parseShortcuts: missing commandId → []", fn: testParseShortcutsMissingCommandId },
+  { name: "parseShortcuts: duplicate prefixes deduped (first wins)", fn: testParseShortcutsDedupesByPrefix },
   // parseSelectableCommands
   { name: "parseSelectableCommands: valid array passes through", fn: testParseSelectableCommandsValid },
   { name: "parseSelectableCommands: null → []", fn: testParseSelectableCommandsNull },

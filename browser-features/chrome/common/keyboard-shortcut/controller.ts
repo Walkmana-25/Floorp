@@ -109,8 +109,6 @@ export class KeyboardShortcutController {
   private handleKeyUp = (event: KeyboardEvent): void => {
     if (!isEnabled()) return;
 
-    const code = event.code;
-
     this.pressedModifiers = {
       alt: event.altKey,
       ctrl: event.ctrlKey,

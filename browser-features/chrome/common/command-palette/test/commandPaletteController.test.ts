@@ -2277,6 +2277,178 @@ const bookmarkHistorySearchTests: TestCase[] = [
       }
     },
   },
+
+  // --- hide/reopen while the deferred @b/@h Places lookup is in flight ---
+  //
+  // hidePalette() resets currentSearchQuery to "" AND clears the pending
+  // 100ms/200ms search timers. To exercise the reset (not just the timer
+  // clear) the search timer must have ALREADY FIRED and the Places lookup be
+  // in flight when hidePalette() is called — only then does the deferred
+  // `.then` callback's `query !== this.currentSearchQuery` guard decide the
+  // outcome. Each test therefore:
+  //   1. proves a marker row actually matches the term (non-vacuous absence),
+  //   2. re-arms the committed search and waits past the 100ms/200ms timer so
+  //      the Places lookup starts,
+  //   3. hides the palette, re-shows it, and lets the in-flight lookup settle,
+  //   4. asserts the stale result is not appended.
+  // Without the `currentSearchQuery = ""` reset the re-typed query string
+  // would still match and the stale marker would leak into the reopened list.
+  {
+    name: "hidePalette while the @b Places lookup is in flight drops the stale result",
+    async fn() {
+      const markerUrl = `https://stalemarker-${Date.now()}.example/`;
+      const markerTitle = `cp-stalemarker-${Date.now()}`;
+      const mod = ChromeUtils.importESModule(
+        "resource://gre/modules/PlacesUtils.sys.mjs",
+      ) as unknown as {
+        PlacesUtils: {
+          bookmarks: {
+            insert(info: {
+              parentGuid: string;
+              title: string;
+              url: string;
+            }): Promise<{ guid: string }>;
+            remove(guid: string): Promise<void>;
+            unfiledGuid: string;
+          };
+        };
+      };
+      let guid: string | null = null;
+      try {
+        const inserted = await mod.PlacesUtils.bookmarks.insert({
+          parentGuid: mod.PlacesUtils.bookmarks.unfiledGuid,
+          title: markerTitle,
+          url: markerUrl,
+        });
+        guid = inserted.guid;
+      } catch (e) {
+        console.error(
+          "[command-palette] @b hide stale insert skipped (Places not writable):",
+          e,
+        );
+        return; // cannot verify results — skip
+      }
+      const shortcutsPrefSnapshot = snapshotShortcutsPref();
+      setShortcuts([]);
+      try {
+        const ctrl = createController();
+        // Phase A: prove the marker matches "stalemarker", so the absence
+        // assertion below is meaningful.
+        ctrl.updateSearch("@b stalemarker");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assert(
+          ctrl.state.filteredCommands().some((c) => c.description === markerUrl),
+          `"@b stalemarker" should surface the marker bookmark (${markerUrl})`,
+        );
+        // Phase B: re-arm the committed search, then wait past the 100ms
+        // search timer (30ms debounce in flushDebounce + 150ms margin) so the
+        // Places lookup is IN FLIGHT — clearTimeout in hidePalette can no
+        // longer cancel it and only the currentSearchQuery guard applies.
+        ctrl.updateSearch("@b stalemarker");
+        await flushDebounce();
+        await sleep(150);
+        ctrl.hidePalette();
+        // Reopen the palette and let the in-flight lookup resolve.
+        ctrl.state.setIsVisible(true);
+        await flushAsyncSearch();
+        const stale = ctrl.state.filteredCommands().filter((c) =>
+          c.category === "bookmark-suggestions" ||
+          c.id.startsWith("__bookmark__") ||
+          c.description === markerUrl
+        );
+        assertEquals(
+          stale.length,
+          0,
+          "stale bookmark results must not be applied after hidePalette()",
+        );
+      } finally {
+        restoreShortcutsPref(shortcutsPrefSnapshot);
+        if (guid !== null) {
+          try {
+            await mod.PlacesUtils.bookmarks.remove(guid);
+          } catch (e) {
+            console.error(
+              "[command-palette] @b hide stale cleanup failed:",
+              e,
+            );
+          }
+        }
+      }
+    },
+  },
+  {
+    name: "hidePalette while the @h Places lookup is in flight drops the stale result",
+    async fn() {
+      const markerUrl = `https://stalemarker-${Date.now()}.example/`;
+      const mod = ChromeUtils.importESModule(
+        "resource://gre/modules/PlacesUtils.sys.mjs",
+      ) as unknown as {
+        PlacesUtils: {
+          history: {
+            insert(info: {
+              url: string;
+              visits: { transition: number; date: Date }[];
+            }): Promise<unknown>;
+            remove(url: string): Promise<void>;
+          };
+        };
+      };
+      try {
+        await mod.PlacesUtils.history.insert({
+          url: markerUrl,
+          visits: [{ transition: 1, date: new Date() }],
+        });
+      } catch (e) {
+        console.error(
+          "[command-palette] @h hide stale insert skipped (Places not writable):",
+          e,
+        );
+        return; // cannot verify results — skip
+      }
+      const shortcutsPrefSnapshot = snapshotShortcutsPref();
+      setShortcuts([]);
+      try {
+        const ctrl = createController();
+        // Phase A: prove the marker matches "stalemarker".
+        ctrl.updateSearch("@h stalemarker");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assert(
+          ctrl.state.filteredCommands().some((c) => c.description === markerUrl),
+          `"@h stalemarker" should surface the marker visit (${markerUrl})`,
+        );
+        // Phase B: re-arm, wait past the 200ms history search timer so the
+        // Places lookup is in flight, then hide.
+        ctrl.updateSearch("@h stalemarker");
+        await flushDebounce();
+        await sleep(250);
+        ctrl.hidePalette();
+        ctrl.state.setIsVisible(true);
+        await flushAsyncSearch();
+        const stale = ctrl.state.filteredCommands().filter((c) =>
+          c.category === "history-suggestions" ||
+          c.id.startsWith("__history__") ||
+          c.description === markerUrl
+        );
+        assertEquals(
+          stale.length,
+          0,
+          "stale history results must not be applied after hidePalette()",
+        );
+      } finally {
+        restoreShortcutsPref(shortcutsPrefSnapshot);
+        try {
+          await mod.PlacesUtils.history.remove(markerUrl);
+        } catch (e) {
+          console.error(
+            "[command-palette] @h hide stale cleanup failed:",
+            e,
+          );
+        }
+      }
+    },
+  },
 ];
 
 function createDeferred<T>(): {

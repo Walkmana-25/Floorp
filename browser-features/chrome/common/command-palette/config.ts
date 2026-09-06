@@ -547,7 +547,14 @@ export function parseShortcuts(
           typeof (el as { commandId?: unknown }).commandId === "string",
       )
     ) {
-      return parsed;
+      // Dedupe by prefix, retaining the first occurrence of each prefix so
+      // persisted data can never carry duplicate prefixes.
+      const seen = new Set<string>();
+      return parsed.filter((el) => {
+        if (seen.has(el.prefix)) return false;
+        seen.add(el.prefix);
+        return true;
+      });
     }
   } catch {
     // ignore — fall through to default
