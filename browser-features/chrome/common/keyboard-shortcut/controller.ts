@@ -14,7 +14,6 @@ import {
 
 export class KeyboardShortcutController {
   private eventListenersAttached = false;
-  private pressedKeys = new Set<string>();
   private pressedModifiers = {
     alt: false,
     ctrl: false,
@@ -56,7 +55,6 @@ export class KeyboardShortcutController {
   }
 
   private resetState(): void {
-    this.pressedKeys.clear();
     this.pressedModifiers = {
       alt: false,
       ctrl: false,
@@ -88,12 +86,8 @@ export class KeyboardShortcutController {
         this.remoteFocusStore,
       )
     ) {
-      // Do not retain a repeated key from before focus entered an editable.
-      this.pressedKeys.delete(code);
       return;
     }
-
-    this.pressedKeys.add(code);
 
     // Ignore pure modifier key presses. Using startsWith keeps this concise
     // and handles location-specific variants like "AltLeft" / "AltRight".
@@ -116,7 +110,6 @@ export class KeyboardShortcutController {
     if (!isEnabled()) return;
 
     const code = event.code;
-    this.pressedKeys.delete(code);
 
     this.pressedModifiers = {
       alt: event.altKey,
@@ -160,11 +153,8 @@ export class KeyboardShortcutController {
 
     if (!key) return false;
 
-    // Missed keyups (or synthetic events dispatched without keyups) can leave
-    // stale codes in pressedKeys. A shortcut — bare or modifier — must fire
-    // only on its own keydown, never because a stale code happens to sit in
-    // the set. The keydown handler always passes the event's own code, so
-    // matching currentCode is sufficient and immune to stale state.
+    // Matching currentCode (the event's own code from this keydown) is
+    // sufficient — no stale state is involved.
     return currentCode === key;
   }
 

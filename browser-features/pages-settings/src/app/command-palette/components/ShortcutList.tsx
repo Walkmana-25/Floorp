@@ -77,6 +77,8 @@ export function ShortcutList() {
   const reservedRows = [
     { prefix: "s", commandLabel: t("commandPalette.shortcuts.reservedWebSearch") },
     { prefix: "t", commandLabel: t("commandPalette.shortcuts.reservedTabSearch") },
+    { prefix: "b", commandLabel: t("commandPalette.shortcuts.reservedBookmarkSearch") },
+    { prefix: "h", commandLabel: t("commandPalette.shortcuts.reservedHistorySearch") },
   ];
 
   /** User-defined shortcuts, excluding reserved prefixes. */

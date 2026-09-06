@@ -708,160 +708,80 @@ export const setSelectableCommands = (value: SelectableCommand[]): void => {
   _setSelectableCommands([...value]);
 };
 
-function createWidth(): [Accessor<number>, Setter<number>] {
-  const [width, setWidth] = createSignal(
+/**
+ * Shared implementation for the integer pref factories below. Creates a
+ * signal seeded from the pref, persists the clamped signal value via an
+ * effect, and mirrors external pref changes back into the signal via an
+ * observer. The persistence error label is derived from the last segment
+ * of the pref name, matching the messages of the factories it replaces.
+ */
+function createClampedIntPref(
+  prefName: string,
+  bounds: { readonly min: number; readonly max: number },
+  fallback: number,
+): [Accessor<number>, Setter<number>] {
+  const [value, setValue] = createSignal(
     clampInt(
-      Services.prefs.getIntPref(COMMAND_PALETTE_WIDTH_PREF, defaultConfig.width),
-      WIDTH_BOUNDS.min,
-      WIDTH_BOUNDS.max,
-      defaultConfig.width,
+      Services.prefs.getIntPref(prefName, fallback),
+      bounds.min,
+      bounds.max,
+      fallback,
     ),
   );
 
   createEffect(() => {
     try {
       Services.prefs.setIntPref(
-        COMMAND_PALETTE_WIDTH_PREF,
-        clampInt(
-          width(),
-          WIDTH_BOUNDS.min,
-          WIDTH_BOUNDS.max,
-          defaultConfig.width,
-        ),
+        prefName,
+        clampInt(value(), bounds.min, bounds.max, fallback),
       );
     } catch (e) {
-      console.error("[command-palette] Failed to persist width pref", e);
+      const label = prefName.split(".").pop() ?? prefName;
+      console.error(`[command-palette] Failed to persist ${label} pref`, e);
     }
   });
 
-  const widthObserver = () => {
-    setWidth(
+  const prefObserver = () => {
+    setValue(
       clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_WIDTH_PREF,
-          defaultConfig.width,
-        ),
-        WIDTH_BOUNDS.min,
-        WIDTH_BOUNDS.max,
-        defaultConfig.width,
+        Services.prefs.getIntPref(prefName, fallback),
+        bounds.min,
+        bounds.max,
+        fallback,
       ),
     );
   };
 
-  Services.prefs.addObserver(COMMAND_PALETTE_WIDTH_PREF, widthObserver);
+  Services.prefs.addObserver(prefName, prefObserver);
   onCleanup(() => {
-    Services.prefs.removeObserver(COMMAND_PALETTE_WIDTH_PREF, widthObserver);
+    Services.prefs.removeObserver(prefName, prefObserver);
   });
 
-  return [width, setWidth];
+  return [value, setValue];
+}
+
+function createWidth(): [Accessor<number>, Setter<number>] {
+  return createClampedIntPref(
+    COMMAND_PALETTE_WIDTH_PREF,
+    WIDTH_BOUNDS,
+    defaultConfig.width,
+  );
 }
 
 function createMaxHeight(): [Accessor<number>, Setter<number>] {
-  const [maxHeight, setMaxHeight] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_MAX_HEIGHT_PREF,
-        defaultConfig.maxHeight,
-      ),
-      MAX_HEIGHT_BOUNDS.min,
-      MAX_HEIGHT_BOUNDS.max,
-      defaultConfig.maxHeight,
-    ),
+  return createClampedIntPref(
+    COMMAND_PALETTE_MAX_HEIGHT_PREF,
+    MAX_HEIGHT_BOUNDS,
+    defaultConfig.maxHeight,
   );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_MAX_HEIGHT_PREF,
-        clampInt(
-          maxHeight(),
-          MAX_HEIGHT_BOUNDS.min,
-          MAX_HEIGHT_BOUNDS.max,
-          defaultConfig.maxHeight,
-        ),
-      );
-    } catch (e) {
-      console.error("[command-palette] Failed to persist maxHeight pref", e);
-    }
-  });
-
-  const maxHeightObserver = () => {
-    setMaxHeight(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_MAX_HEIGHT_PREF,
-          defaultConfig.maxHeight,
-        ),
-        MAX_HEIGHT_BOUNDS.min,
-        MAX_HEIGHT_BOUNDS.max,
-        defaultConfig.maxHeight,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(COMMAND_PALETTE_MAX_HEIGHT_PREF, maxHeightObserver);
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_MAX_HEIGHT_PREF,
-      maxHeightObserver,
-    );
-  });
-
-  return [maxHeight, setMaxHeight];
 }
 
 function createOffsetTop(): [Accessor<number>, Setter<number>] {
-  const [offsetTop, setOffsetTop] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_OFFSET_TOP_PREF,
-        defaultConfig.offsetTop,
-      ),
-      OFFSET_TOP_BOUNDS.min,
-      OFFSET_TOP_BOUNDS.max,
-      defaultConfig.offsetTop,
-    ),
+  return createClampedIntPref(
+    COMMAND_PALETTE_OFFSET_TOP_PREF,
+    OFFSET_TOP_BOUNDS,
+    defaultConfig.offsetTop,
   );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_OFFSET_TOP_PREF,
-        clampInt(
-          offsetTop(),
-          OFFSET_TOP_BOUNDS.min,
-          OFFSET_TOP_BOUNDS.max,
-          defaultConfig.offsetTop,
-        ),
-      );
-    } catch (e) {
-      console.error("[command-palette] Failed to persist offsetTop pref", e);
-    }
-  });
-
-  const offsetTopObserver = () => {
-    setOffsetTop(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_OFFSET_TOP_PREF,
-          defaultConfig.offsetTop,
-        ),
-        OFFSET_TOP_BOUNDS.min,
-        OFFSET_TOP_BOUNDS.max,
-        defaultConfig.offsetTop,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(COMMAND_PALETTE_OFFSET_TOP_PREF, offsetTopObserver);
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_OFFSET_TOP_PREF,
-      offsetTopObserver,
-    );
-  });
-
-  return [offsetTop, setOffsetTop];
 }
 
 function createHorizontalAlign(): [
@@ -917,297 +837,43 @@ function createHorizontalAlign(): [
 }
 
 function createFontSize(): [Accessor<number>, Setter<number>] {
-  const [fontSize, setFontSize] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_FONT_SIZE_PREF,
-        defaultConfig.fontSize,
-      ),
-      FONT_SIZE_BOUNDS.min,
-      FONT_SIZE_BOUNDS.max,
-      defaultConfig.fontSize,
-    ),
+  return createClampedIntPref(
+    COMMAND_PALETTE_FONT_SIZE_PREF,
+    FONT_SIZE_BOUNDS,
+    defaultConfig.fontSize,
   );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_FONT_SIZE_PREF,
-        clampInt(
-          fontSize(),
-          FONT_SIZE_BOUNDS.min,
-          FONT_SIZE_BOUNDS.max,
-          defaultConfig.fontSize,
-        ),
-      );
-    } catch (e) {
-      console.error("[command-palette] Failed to persist fontSize pref", e);
-    }
-  });
-
-  const fontSizeObserver = () => {
-    setFontSize(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_FONT_SIZE_PREF,
-          defaultConfig.fontSize,
-        ),
-        FONT_SIZE_BOUNDS.min,
-        FONT_SIZE_BOUNDS.max,
-        defaultConfig.fontSize,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(COMMAND_PALETTE_FONT_SIZE_PREF, fontSizeObserver);
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_FONT_SIZE_PREF,
-      fontSizeObserver,
-    );
-  });
-
-  return [fontSize, setFontSize];
 }
 
 function createMaxResultsPerCategory(): [Accessor<number>, Setter<number>] {
-  const [maxResultsPerCategory, setMaxResultsPerCategory] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_MAX_RESULTS_PER_CATEGORY_PREF,
-        defaultConfig.maxResultsPerCategory,
-      ),
-      MAX_RESULTS_PER_CATEGORY_BOUNDS.min,
-      MAX_RESULTS_PER_CATEGORY_BOUNDS.max,
-      defaultConfig.maxResultsPerCategory,
-    ),
-  );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_MAX_RESULTS_PER_CATEGORY_PREF,
-        clampInt(
-          maxResultsPerCategory(),
-          MAX_RESULTS_PER_CATEGORY_BOUNDS.min,
-          MAX_RESULTS_PER_CATEGORY_BOUNDS.max,
-          defaultConfig.maxResultsPerCategory,
-        ),
-      );
-    } catch (e) {
-      console.error(
-        "[command-palette] Failed to persist maxResultsPerCategory pref",
-        e,
-      );
-    }
-  });
-
-  const maxResultsPerCategoryObserver = () => {
-    setMaxResultsPerCategory(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_MAX_RESULTS_PER_CATEGORY_PREF,
-          defaultConfig.maxResultsPerCategory,
-        ),
-        MAX_RESULTS_PER_CATEGORY_BOUNDS.min,
-        MAX_RESULTS_PER_CATEGORY_BOUNDS.max,
-        defaultConfig.maxResultsPerCategory,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(
+  return createClampedIntPref(
     COMMAND_PALETTE_MAX_RESULTS_PER_CATEGORY_PREF,
-    maxResultsPerCategoryObserver,
+    MAX_RESULTS_PER_CATEGORY_BOUNDS,
+    defaultConfig.maxResultsPerCategory,
   );
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_MAX_RESULTS_PER_CATEGORY_PREF,
-      maxResultsPerCategoryObserver,
-    );
-  });
-
-  return [maxResultsPerCategory, setMaxResultsPerCategory];
 }
 
 function createMaxBookmarkSuggestions(): [Accessor<number>, Setter<number>] {
-  const [maxBookmarkSuggestions, setMaxBookmarkSuggestions] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_MAX_BOOKMARK_SUGGESTIONS_PREF,
-        defaultConfig.maxBookmarkSuggestions,
-      ),
-      MAX_BOOKMARK_SUGGESTIONS_BOUNDS.min,
-      MAX_BOOKMARK_SUGGESTIONS_BOUNDS.max,
-      defaultConfig.maxBookmarkSuggestions,
-    ),
-  );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_MAX_BOOKMARK_SUGGESTIONS_PREF,
-        clampInt(
-          maxBookmarkSuggestions(),
-          MAX_BOOKMARK_SUGGESTIONS_BOUNDS.min,
-          MAX_BOOKMARK_SUGGESTIONS_BOUNDS.max,
-          defaultConfig.maxBookmarkSuggestions,
-        ),
-      );
-    } catch (e) {
-      console.error(
-        "[command-palette] Failed to persist maxBookmarkSuggestions pref",
-        e,
-      );
-    }
-  });
-
-  const maxBookmarkSuggestionsObserver = () => {
-    setMaxBookmarkSuggestions(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_MAX_BOOKMARK_SUGGESTIONS_PREF,
-          defaultConfig.maxBookmarkSuggestions,
-        ),
-        MAX_BOOKMARK_SUGGESTIONS_BOUNDS.min,
-        MAX_BOOKMARK_SUGGESTIONS_BOUNDS.max,
-        defaultConfig.maxBookmarkSuggestions,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(
+  return createClampedIntPref(
     COMMAND_PALETTE_MAX_BOOKMARK_SUGGESTIONS_PREF,
-    maxBookmarkSuggestionsObserver,
+    MAX_BOOKMARK_SUGGESTIONS_BOUNDS,
+    defaultConfig.maxBookmarkSuggestions,
   );
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_MAX_BOOKMARK_SUGGESTIONS_PREF,
-      maxBookmarkSuggestionsObserver,
-    );
-  });
-
-  return [maxBookmarkSuggestions, setMaxBookmarkSuggestions];
 }
 
 function createMaxHistorySuggestions(): [Accessor<number>, Setter<number>] {
-  const [maxHistorySuggestions, setMaxHistorySuggestions] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_MAX_HISTORY_SUGGESTIONS_PREF,
-        defaultConfig.maxHistorySuggestions,
-      ),
-      MAX_HISTORY_SUGGESTIONS_BOUNDS.min,
-      MAX_HISTORY_SUGGESTIONS_BOUNDS.max,
-      defaultConfig.maxHistorySuggestions,
-    ),
-  );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_MAX_HISTORY_SUGGESTIONS_PREF,
-        clampInt(
-          maxHistorySuggestions(),
-          MAX_HISTORY_SUGGESTIONS_BOUNDS.min,
-          MAX_HISTORY_SUGGESTIONS_BOUNDS.max,
-          defaultConfig.maxHistorySuggestions,
-        ),
-      );
-    } catch (e) {
-      console.error(
-        "[command-palette] Failed to persist maxHistorySuggestions pref",
-        e,
-      );
-    }
-  });
-
-  const maxHistorySuggestionsObserver = () => {
-    setMaxHistorySuggestions(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_MAX_HISTORY_SUGGESTIONS_PREF,
-          defaultConfig.maxHistorySuggestions,
-        ),
-        MAX_HISTORY_SUGGESTIONS_BOUNDS.min,
-        MAX_HISTORY_SUGGESTIONS_BOUNDS.max,
-        defaultConfig.maxHistorySuggestions,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(
+  return createClampedIntPref(
     COMMAND_PALETTE_MAX_HISTORY_SUGGESTIONS_PREF,
-    maxHistorySuggestionsObserver,
+    MAX_HISTORY_SUGGESTIONS_BOUNDS,
+    defaultConfig.maxHistorySuggestions,
   );
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_MAX_HISTORY_SUGGESTIONS_PREF,
-      maxHistorySuggestionsObserver,
-    );
-  });
-
-  return [maxHistorySuggestions, setMaxHistorySuggestions];
 }
 
 function createMaxTabsResults(): [Accessor<number>, Setter<number>] {
-  const [maxTabsResults, setMaxTabsResults] = createSignal(
-    clampInt(
-      Services.prefs.getIntPref(
-        COMMAND_PALETTE_MAX_TABS_RESULTS_PREF,
-        defaultConfig.maxTabsResults,
-      ),
-      MAX_TABS_RESULTS_BOUNDS.min,
-      MAX_TABS_RESULTS_BOUNDS.max,
-      defaultConfig.maxTabsResults,
-    ),
-  );
-
-  createEffect(() => {
-    try {
-      Services.prefs.setIntPref(
-        COMMAND_PALETTE_MAX_TABS_RESULTS_PREF,
-        clampInt(
-          maxTabsResults(),
-          MAX_TABS_RESULTS_BOUNDS.min,
-          MAX_TABS_RESULTS_BOUNDS.max,
-          defaultConfig.maxTabsResults,
-        ),
-      );
-    } catch (e) {
-      console.error(
-        "[command-palette] Failed to persist maxTabsResults pref",
-        e,
-      );
-    }
-  });
-
-  const maxTabsResultsObserver = () => {
-    setMaxTabsResults(
-      clampInt(
-        Services.prefs.getIntPref(
-          COMMAND_PALETTE_MAX_TABS_RESULTS_PREF,
-          defaultConfig.maxTabsResults,
-        ),
-        MAX_TABS_RESULTS_BOUNDS.min,
-        MAX_TABS_RESULTS_BOUNDS.max,
-        defaultConfig.maxTabsResults,
-      ),
-    );
-  };
-
-  Services.prefs.addObserver(
+  return createClampedIntPref(
     COMMAND_PALETTE_MAX_TABS_RESULTS_PREF,
-    maxTabsResultsObserver,
+    MAX_TABS_RESULTS_BOUNDS,
+    defaultConfig.maxTabsResults,
   );
-  onCleanup(() => {
-    Services.prefs.removeObserver(
-      COMMAND_PALETTE_MAX_TABS_RESULTS_PREF,
-      maxTabsResultsObserver,
-    );
-  });
-
-  return [maxTabsResults, setMaxTabsResults];
 }
 
 export const [_width, _setWidth] = createRootHMR(

@@ -841,10 +841,12 @@
             "noCommands": "No commands available. Restart the browser to load commands.",
             "empty": "No shortcuts configured.",
             "reservedTitle": "Reserved Shortcuts",
-            "reservedDescription": "@s (web search) and @t (open-tabs search) are reserved built-in shortcuts and cannot be changed or removed.",
+            "reservedDescription": "@s (web search), @t (open-tabs search), @b (bookmark search), and @h (history search) are reserved built-in shortcuts and cannot be changed or removed.",
             "reservedBadge": "Reserved",
             "reservedWebSearch": "Search the Web",
             "reservedTabSearch": "Search Open Tabs",
+            "reservedBookmarkSearch": "Search Bookmarks",
+            "reservedHistorySearch": "Search History",
             "errorReserved": "This prefix is reserved and cannot be used."
         }
     }

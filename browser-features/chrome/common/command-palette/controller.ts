@@ -1437,6 +1437,19 @@ export class CommandPaletteController {
       // — @t is an explicit tab-search mode, so it ignores the pref and always
       // shows every open tab (intentional).
       if (prefixPart === "t") {
+        // Clear any in-flight or debounced bookmark/history search armed by the
+        // normal search path (or a previous @b/@h query) so the stale async
+        // result cannot leak into the tab-search / web-search list below.
+        // Same clearing pattern as the @b/@h branch.
+        this.currentSearchQuery = "";
+        if (this.bookmarkSearchTimer) {
+          clearTimeout(this.bookmarkSearchTimer);
+          this.bookmarkSearchTimer = null;
+        }
+        if (this.historySearchTimer) {
+          clearTimeout(this.historySearchTimer);
+          this.historySearchTimer = null;
+        }
         // "@t" exactly (no args, no trailing space): don't commit to the
         // dedicated tab-search mode yet. Show the reserved @t row plus any
         // user-defined shortcuts starting with "@t" so typing continues to
@@ -1475,6 +1488,19 @@ export class CommandPaletteController {
       // which calls search-web's fn with no args — search-web's fn early-returns when
       // query is absent, so this is a silent no-op (not a step-input entry).
       if (prefixPart === "s") {
+        // Clear any in-flight or debounced bookmark/history search armed by the
+        // normal search path (or a previous @b/@h query) so the stale async
+        // result cannot leak into the tab-search / web-search list below.
+        // Same clearing pattern as the @b/@h branch.
+        this.currentSearchQuery = "";
+        if (this.bookmarkSearchTimer) {
+          clearTimeout(this.bookmarkSearchTimer);
+          this.bookmarkSearchTimer = null;
+        }
+        if (this.historySearchTimer) {
+          clearTimeout(this.historySearchTimer);
+          this.historySearchTimer = null;
+        }
         // "@s" exactly (no args, no trailing space): don't commit to the
         // dedicated web-search mode yet. Show the reserved @s row (when
         // floorp-search-web is registered) plus any user-defined shortcuts

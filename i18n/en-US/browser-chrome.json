@@ -595,6 +595,7 @@
     "bookmarkSwitcherWhereNewTab": "New Tab",
     "bookmarkSwitcherWhereNewTabDesc": "Open in a new foreground tab",
     "bookmarkSwitcherWherePlaceholder": "Select where to open...",
+    "shortcutLabel": "@{{prefix}}",
     "shortcutWithArgsLabel": "@{{prefix}} {{args}}",
     "searchShortcutDescription": "Search \"{{query}}\"",
     "shortcuts": {

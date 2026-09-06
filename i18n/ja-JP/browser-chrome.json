@@ -595,6 +595,7 @@
     "bookmarkSwitcherWhereNewTab": "新しいタブ",
     "bookmarkSwitcherWhereNewTabDesc": "新しいタブに切り替えて開く",
     "bookmarkSwitcherWherePlaceholder": "開く場所を選択...",
+    "shortcutLabel": "@{{prefix}}",
     "shortcutWithArgsLabel": "@{{prefix}} {{args}}",
     "searchShortcutDescription": "「{{query}}」を検索",
     "shortcuts": {

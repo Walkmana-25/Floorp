@@ -64,7 +64,9 @@ export async function searchBookmarks(
     // by the caller's limit.
     const results = query
       ? await PlacesUtils.bookmarks.search(query)
-      : await PlacesUtils.bookmarks.getRecent(limit);
+      // getRecent counts folders/separators toward its limit; over-fetch so
+      // the TYPE_BOOKMARK filter below still yields `limit` real bookmarks.
+      : await PlacesUtils.bookmarks.getRecent(Math.max(limit * 4, limit + 10));
     console.debug(
       "[command-palette/bookmark] Raw results count:",
       results.length,

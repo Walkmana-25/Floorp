@@ -2005,6 +2005,195 @@ const bookmarkHistorySearchTests: TestCase[] = [
     },
   },
 
+  // --- Stale-query guard (@t/@s): replacing the query clears pending work ---
+  //
+  // The @b/@h fzf branch clears the pending bookmark/history search on entry,
+  // but the @t/@s branches must do the same: a committed "@b foo" (or a normal
+  // search for "foo") arms a 100ms timer whose freshness guard compares the
+  // captured query against currentSearchQuery. If the user replaces the whole
+  // query with "@t x" / "@s x" without the branches resetting
+  // currentSearchQuery and clearing the timers, the stale guard passes
+  // trivially ("@b foo" === currentSearchQuery) and the old bookmark results
+  // are appended on top of the tab / web-search list.
+  //
+  // Same deterministic leak window and marker pattern as the fzf-stale test
+  // above: flushDebounce leaves the armed timer un-fired (~70ms remaining),
+  // and the marker's title/url contain ONLY the first query's term ("foo").
+  {
+    name: "@b <query> replaced by @t x clears the pending search (no stale leak into the tab list)",
+    async fn() {
+      const markerUrl = `https://stale-foo-${Date.now()}.example/`;
+      const markerTitle = `cp-stale-foo-${Date.now()}`;
+      const mod = ChromeUtils.importESModule(
+        "resource://gre/modules/PlacesUtils.sys.mjs",
+      ) as unknown as {
+        PlacesUtils: {
+          bookmarks: {
+            insert(info: {
+              parentGuid: string;
+              title: string;
+              url: string;
+            }): Promise<{ guid: string }>;
+            remove(guid: string): Promise<void>;
+            unfiledGuid: string;
+          };
+        };
+      };
+      let guid: string | null = null;
+      try {
+        const inserted = await mod.PlacesUtils.bookmarks.insert({
+          parentGuid: mod.PlacesUtils.bookmarks.unfiledGuid,
+          title: markerTitle,
+          url: markerUrl,
+        });
+        guid = inserted.guid;
+      } catch (e) {
+        console.error(
+          "[command-palette] @t stale insert skipped (Places not writable):",
+          e,
+        );
+        return; // cannot verify results — skip
+      }
+      const shortcutsPrefSnapshot = snapshotShortcutsPref();
+      setShortcuts([]);
+      try {
+        const ctrl = createController();
+        // Phase A: the committed @b search DOES surface the marker, proving
+        // the marker actually matches "foo" (otherwise the absence assertion
+        // below would be vacuous).
+        ctrl.updateSearch("@b foo");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assert(
+          ctrl.state.filteredCommands().some((c) => c.description === markerUrl),
+          `"@b foo" should surface the marker bookmark (${markerUrl})`,
+        );
+        // Phase B: re-arm the committed search, then replace the whole query
+        // with "@t x" while the 100ms timer is still pending (flushDebounce
+        // leaves the timer armed for ~70ms).
+        ctrl.updateSearch("@b foo");
+        await flushDebounce();
+        ctrl.updateSearch("@t x");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assertEquals(
+          ctrl.state.highlightQuery(),
+          "x",
+          "highlight should reflect the @t args",
+        );
+        const rows = ctrl.state.filteredCommands();
+        assert(
+          !rows.some((c) => c.description === markerUrl),
+          `stale marker bookmark (${markerUrl}) must not leak into the @t tab list`,
+        );
+        for (const cmd of rows) {
+          assert(
+            cmd.category !== "bookmark-suggestions",
+            `row "${cmd.id}" must not be a stale bookmark suggestion in @t mode`,
+          );
+        }
+      } finally {
+        restoreShortcutsPref(shortcutsPrefSnapshot);
+        if (guid !== null) {
+          try {
+            await mod.PlacesUtils.bookmarks.remove(guid);
+          } catch (e) {
+            console.error(
+              "[command-palette] @t stale cleanup failed:",
+              e,
+            );
+          }
+        }
+      }
+    },
+  },
+
+  {
+    name: "@b <query> replaced by @s x clears the pending search (no stale leak into the web-search list)",
+    async fn() {
+      const markerUrl = `https://stale-foo-${Date.now()}.example/`;
+      const markerTitle = `cp-stale-foo-${Date.now()}`;
+      const mod = ChromeUtils.importESModule(
+        "resource://gre/modules/PlacesUtils.sys.mjs",
+      ) as unknown as {
+        PlacesUtils: {
+          bookmarks: {
+            insert(info: {
+              parentGuid: string;
+              title: string;
+              url: string;
+            }): Promise<{ guid: string }>;
+            remove(guid: string): Promise<void>;
+            unfiledGuid: string;
+          };
+        };
+      };
+      let guid: string | null = null;
+      try {
+        const inserted = await mod.PlacesUtils.bookmarks.insert({
+          parentGuid: mod.PlacesUtils.bookmarks.unfiledGuid,
+          title: markerTitle,
+          url: markerUrl,
+        });
+        guid = inserted.guid;
+      } catch (e) {
+        console.error(
+          "[command-palette] @s stale insert skipped (Places not writable):",
+          e,
+        );
+        return; // cannot verify results — skip
+      }
+      const shortcutsPrefSnapshot = snapshotShortcutsPref();
+      setShortcuts([]);
+      try {
+        const ctrl = createController();
+        // Phase A: prove the marker matches "foo" (see the @t variant above).
+        ctrl.updateSearch("@b foo");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assert(
+          ctrl.state.filteredCommands().some((c) => c.description === markerUrl),
+          `"@b foo" should surface the marker bookmark (${markerUrl})`,
+        );
+        // Phase B: re-arm the committed search, then replace the whole query
+        // with "@s x" while the 100ms timer is still pending.
+        ctrl.updateSearch("@b foo");
+        await flushDebounce();
+        ctrl.updateSearch("@s x");
+        await flushDebounce();
+        await flushAsyncSearch();
+        assertEquals(
+          ctrl.state.highlightQuery(),
+          "x",
+          "highlight should reflect the @s args",
+        );
+        const rows = ctrl.state.filteredCommands();
+        assert(
+          !rows.some((c) => c.description === markerUrl),
+          `stale marker bookmark (${markerUrl}) must not leak into the @s web-search list`,
+        );
+        for (const cmd of rows) {
+          assert(
+            cmd.category !== "bookmark-suggestions",
+            `row "${cmd.id}" must not be a stale bookmark suggestion in @s mode`,
+          );
+        }
+      } finally {
+        restoreShortcutsPref(shortcutsPrefSnapshot);
+        if (guid !== null) {
+          try {
+            await mod.PlacesUtils.bookmarks.remove(guid);
+          } catch (e) {
+            console.error(
+              "[command-palette] @s stale cleanup failed:",
+              e,
+            );
+          }
+        }
+      }
+    },
+  },
+
   // --- Selecting __reserved:b transitions into @b mode without hiding the palette ---
   {
     name: "executing __reserved:b transitions to @b mode (palette stays open)",
