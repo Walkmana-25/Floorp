@@ -47,13 +47,23 @@ export const useFirefoxKeys = (): FirefoxKeysState => {
 
     void load();
 
-    const unsubscribe = keySync.subscribe((nextKeys) => {
-      setKeys(nextKeys);
-    });
+    // Guarded so a client-level failure can never tear the React tree down
+    // from inside an effect; the effect degrades to a static empty list.
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = keySync.subscribe((nextKeys) => {
+        setKeys(nextKeys);
+      });
+    } catch (error) {
+      console.error(
+        "[KeyboardShortcut] Failed to subscribe to Firefox key updates",
+        error,
+      );
+    }
 
     return () => {
       cancelled = true;
-      unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 

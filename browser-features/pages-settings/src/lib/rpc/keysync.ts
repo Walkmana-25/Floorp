@@ -211,16 +211,28 @@ function createUnavailableKeySyncClient(): KeySyncClient {
 }
 
 function createDirectKeySyncClient(): KeySyncClient {
-  let service: KeySyncServiceModule["keySyncService"];
+  let service: KeySyncServiceModule["keySyncService"] | null = null;
   try {
-    ({ keySyncService: service } = ChromeUtils.importESModule(
+    const imported = ChromeUtils.importESModule(
       KEYSYNC_SERVICE_URI,
-    ) as KeySyncServiceModule);
+    ) as Partial<KeySyncServiceModule>;
+    // Some embedded contexts expose an importESModule that resolves without
+    // the noraneko module registered. Validate the shape instead of trusting
+    // the import succeeding.
+    if (
+      imported &&
+      typeof imported.keySyncService?.getKeys === "function" &&
+      typeof imported.keySyncService.addListener === "function"
+    ) {
+      service = imported.keySyncService;
+    }
   } catch (error) {
     console.error(
       "[NRKeySync] Failed to load NRKeySyncService; key settings are unavailable",
       error,
     );
+  }
+  if (!service) {
     return createUnavailableKeySyncClient();
   }
   return {
