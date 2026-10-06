@@ -5,8 +5,8 @@
 
 import type {
   FirefoxKeyEntry,
-  KeySyncChangeResult,
   KeySyncChangeListener,
+  KeySyncChangeResult,
 } from "../common/NRKeySyncTypes.ts";
 import type { XulCombo } from "../common/NRKeySyncCombo.ts";
 

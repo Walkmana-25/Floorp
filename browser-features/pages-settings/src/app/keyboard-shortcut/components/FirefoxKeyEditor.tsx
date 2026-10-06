@@ -48,7 +48,7 @@ interface FloorpConflict {
 export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
   const { t } = useTranslation();
   const [modifiers, setModifiers] = useState<Modifiers>(() =>
-    xulStringToModifiers(entry.modifiers, isMac()),
+    xulStringToModifiers(entry.modifiers, isMac())
   );
   const [code, setCode] = useState<string>(
     () => xulKeyToCode({ key: entry.key, keycode: entry.keycode }) ?? "",
@@ -122,9 +122,9 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
     setFloorpConflict(
       floorpMatch
         ? {
-            actionId: floorpMatch[0],
-            shortcutText: formatFloorpShortcutText(floorpMatch[1]),
-          }
+          actionId: floorpMatch[0],
+          shortcutText: formatFloorpShortcutText(floorpMatch[1]),
+        }
         : null,
     );
   };
@@ -170,9 +170,7 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
   };
 
   // Null when the recorded code has no XUL representation and cannot be saved.
-  const xulKeyDefinition = code
-    ? codeToXulKey(normalizeKeyCode(code))
-    : null;
+  const xulKeyDefinition = code ? codeToXulKey(normalizeKeyCode(code)) : null;
 
   const handleSave = async (): Promise<void> => {
     if (saving || !code || !xulKeyDefinition) return;
@@ -333,7 +331,9 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
 
         <div className="floorp-field">
           <label className="floorp-field-label">
-            <span className="floorp-field-text">{t("keyboardShortcut.key")}</span>
+            <span className="floorp-field-text">
+              {t("keyboardShortcut.key")}
+            </span>
           </label>
           <div className="relative">
             <Input

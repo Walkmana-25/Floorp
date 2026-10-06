@@ -74,17 +74,19 @@ export const FirefoxKeysSettings = () => {
     null,
   );
   // The config hook starts with a partial object before its first load.
-  const floorpConflictCodes = collectFloorpConflictCodes(config.shortcuts ?? {});
+  const floorpConflictCodes = collectFloorpConflictCodes(
+    config.shortcuts ?? {},
+  );
 
   const mainKeys = keys.filter((entry) => entry.keysetKind === "main");
-  const extensionKeys = keys.filter((entry) => entry.keysetKind === "extension");
+  const extensionKeys = keys.filter((entry) =>
+    entry.keysetKind === "extension"
+  );
 
   const renderRow = (entry: FirefoxKeyEntry) => {
-    const canReset =
-      entry.customized && !entry.internal &&
+    const canReset = entry.customized && !entry.internal &&
       entry.keysetKind === "main" && writeEnabled;
-    const hasFloorpConflict =
-      entry.canonicalCode !== null &&
+    const hasFloorpConflict = entry.canonicalCode !== null &&
       floorpConflictCodes.has(entry.canonicalCode);
 
     return (
@@ -101,13 +103,13 @@ export const FirefoxKeysSettings = () => {
         </td>
         <td>
           <div className="flex flex-wrap items-center gap-2">
-            {entry.shortcutText ? (
-              <span className="font-mono">{entry.shortcutText}</span>
-            ) : (
-              <span className="text-base-content/50">
-                {t("keyboardShortcut.notSet")}
-              </span>
-            )}
+            {entry.shortcutText
+              ? <span className="font-mono">{entry.shortcutText}</span>
+              : (
+                <span className="text-base-content/50">
+                  {t("keyboardShortcut.notSet")}
+                </span>
+              )}
             {entry.customized && (
               <span className="badge badge-info badge-outline badge-sm">
                 {t("keyboardShortcut.firefoxKeyCustomized")}
@@ -161,9 +163,7 @@ export const FirefoxKeysSettings = () => {
     return (
       <div className="mt-6 first:mt-0">
         <h3 className="text-sm font-semibold mb-2">{heading}</h3>
-        {note && (
-          <p className="text-xs text-base-content/60 mb-2">{note}</p>
-        )}
+        {note && <p className="text-xs text-base-content/60 mb-2">{note}</p>}
         <div className="overflow-x-auto">
           <table className={`floorp-table ${styles.table}`}>
             <thead>
@@ -211,22 +211,22 @@ export const FirefoxKeysSettings = () => {
           </div>
         )}
 
-        {loading ? (
-          <div className="py-6 text-center">{t("loading")}...</div>
-        ) : (
-          <>
-            {renderGroup(
-              t("keyboardShortcut.firefoxKeysMainGroup"),
-              null,
-              mainKeys,
-            )}
-            {renderGroup(
-              t("keyboardShortcut.firefoxKeysExtensionGroup"),
-              t("keyboardShortcut.firefoxKeyInternal"),
-              extensionKeys,
-            )}
-          </>
-        )}
+        {loading
+          ? <div className="py-6 text-center">{t("loading")}...</div>
+          : (
+            <>
+              {renderGroup(
+                t("keyboardShortcut.firefoxKeysMainGroup"),
+                null,
+                mainKeys,
+              )}
+              {renderGroup(
+                t("keyboardShortcut.firefoxKeysExtensionGroup"),
+                t("keyboardShortcut.firefoxKeyInternal"),
+                extensionKeys,
+              )}
+            </>
+          )}
       </CardContent>
       {editingEntry && (
         <FirefoxKeyEditor

@@ -107,8 +107,8 @@ function createCodeToXulKeyTable(): Record<string, XulKeyDefinition> {
   return table;
 }
 
-const CODE_TO_XUL_KEY: Readonly<Record<string, XulKeyDefinition>> =
-  Object.freeze(createCodeToXulKeyTable());
+const CODE_TO_XUL_KEY: Readonly<Record<string, XulKeyDefinition>> = Object
+  .freeze(createCodeToXulKeyTable());
 
 function createXulKeyToCodeLookups(): {
   byKey: Map<string, string>;

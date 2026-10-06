@@ -5,8 +5,8 @@
 
 import {
   formatXulComboText,
-  xulComboToCanonicalCode,
   type XulCombo,
+  xulComboToCanonicalCode,
 } from "../common/NRKeySyncCombo.ts";
 import type {
   CustomKeysModule,
@@ -202,8 +202,8 @@ export class KeySyncService {
       return guard;
     }
     const hasKey = typeof combo.key === "string" && combo.key.length > 0;
-    const hasKeycode =
-      typeof combo.keycode === "string" && combo.keycode.length > 0;
+    const hasKeycode = typeof combo.keycode === "string" &&
+      combo.keycode.length > 0;
     try {
       if (!hasKey && !hasKeycode) {
         customKeys.clearKey(id);
@@ -416,6 +416,12 @@ export class KeySyncService {
     for (const keyEl of doc.querySelectorAll("keyset[id] > key")) {
       const keyset = keyEl.parentElement;
       if (!keyset || !keyset.id) {
+        continue;
+      }
+      // Key elements without an id cannot be identified, addressed by
+      // CustomKeys.changeKey(), or deduplicated across windows, so they are
+      // excluded from the mirror.
+      if (!keyEl.id) {
         continue;
       }
       const entry = this.#buildEntry(keyEl, doc, keysetKindForId(keyset.id));
