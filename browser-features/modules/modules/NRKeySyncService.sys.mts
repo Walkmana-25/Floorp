@@ -157,6 +157,9 @@ export class KeySyncService {
         }
       },
     };
+    // The service is a process-lifetime singleton, so the window mediator
+    // listener is intentionally never removed. Per-window observers are
+    // detached via #detachWindow on window close.
     Services.wm.addListener(windowListener);
   }
 

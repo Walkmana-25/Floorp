@@ -1,10 +1,10 @@
-import { Button } from "../../../../../../libs/ui/button.tsx";
-import { Modal } from "../../../../../../libs/ui/modal.tsx";
 /* -*- indent-tabs-mode: nil; js-indent-level: 2 -*-
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { Button } from "../../../../../../libs/ui/button.tsx";
+import { Modal } from "../../../../../../libs/ui/modal.tsx";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -93,6 +93,21 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
    * other mirrored Firefox keys and against Floorp's own shortcuts. Both
    * are warnings only — saving stays possible.
    */
+  /**
+   * Resolves a Floorp action id to a display label. Keyboard-only actions
+   * live under `keyboardShortcut.actionLabels`, everything else under
+   * `mouseGesture.actions` (same fallback chain as the shortcut action
+   * list); the raw id is the final fallback.
+   */
+  const floorpActionLabel = (actionId: string): string => {
+    const keyboardOnlyLabel = t(
+      `keyboardShortcut.actionLabels.${actionId}`,
+    );
+    if (keyboardOnlyLabel !== `keyboardShortcut.actionLabels.${actionId}`) {
+      return keyboardOnlyLabel;
+    }
+    return t(`mouseGesture.actions.${actionId}`, actionId);
+  };
   const checkConflicts = (
     nextModifiers: Modifiers,
     nextCode: string,
@@ -151,7 +166,9 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isRecording]);
+    // `modifiers` is included so the recorded-key conflict check always sees
+    // the current checkbox state even when toggled mid-recording.
+  }, [isRecording, modifiers]);
 
   useEffect(() => {
     if (code) {
@@ -263,7 +280,7 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
           <div className="floorp-notice floorp-notice-warning">
             <span className="text-sm">
               {t("keyboardShortcut.firefoxKeyConflict", {
-                label: t(`mouseGesture.actions.${floorpConflict.actionId}`),
+                label: floorpActionLabel(floorpConflict.actionId),
                 shortcut: floorpConflict.shortcutText,
               })}
             </span>
