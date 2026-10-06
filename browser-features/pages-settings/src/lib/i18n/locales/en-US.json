@@ -851,6 +851,8 @@
         "firefoxKeyFloorpConflict": "Floorp conflict",
         "firefoxKeyFloorpConflictHint": "Floorp takes priority for this combination. Open about:keyboard to adjust Firefox's side.",
         "firefoxKeyReset": "Reset",
+        "firefoxKeyEditTitle": "Edit Firefox shortcut",
+        "firefoxKeySaveFailed": "Failed to save: {{error}}",
         "invalidKey": "Invalid key",
         "invalidKeyDescription": "Please select a valid key.",
         "noModifier": "No modifier key selected",

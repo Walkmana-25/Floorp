@@ -1,3 +1,4 @@
+import type { FirefoxKeyEntry } from "../../../../modules/common/NRKeySyncTypes.ts";
 import type { KeyboardShortcutConfig, ShortcutConfig } from "../../types/pref.ts";
 
 export interface ShortcutsSettingsProps {
@@ -14,4 +15,9 @@ export interface ShortcutEditorProps {
   initialShortcut: ShortcutConfig | null;
   existingShortcuts: ShortcutConfig[];
   actionId: string;
+}
+
+export interface FirefoxKeyEditorProps {
+  entry: FirefoxKeyEntry;
+  onClose: () => void;
 }

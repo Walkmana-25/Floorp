@@ -5,6 +5,7 @@ import { Button } from "../../../../../../libs/ui/button.tsx";
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { comboToCanonicalCode } from "../../../../../modules/common/NRKeySyncCombo.ts";
 import type { FirefoxKeyEntry } from "../../../../../modules/common/NRKeySyncTypes.ts";
@@ -12,6 +13,7 @@ import type { ShortcutConfig } from "../../../types/pref.ts";
 import { keySync } from "../../../lib/rpc/keysync.ts";
 import { useKeyboardShortcutConfig } from "../dataManager.ts";
 import { useFirefoxKeys } from "../firefoxKeysManager.ts";
+import { FirefoxKeyEditor } from "./FirefoxKeyEditor.tsx";
 import {
   Card,
   CardContent,
@@ -68,6 +70,9 @@ export const FirefoxKeysSettings = () => {
   const { t } = useTranslation();
   const { keys, writeEnabled, loading } = useFirefoxKeys();
   const { config } = useKeyboardShortcutConfig();
+  const [editingEntry, setEditingEntry] = useState<FirefoxKeyEntry | null>(
+    null,
+  );
   // The config hook starts with a partial object before its first load.
   const floorpConflictCodes = collectFloorpConflictCodes(config.shortcuts ?? {});
 
@@ -121,8 +126,12 @@ export const FirefoxKeysSettings = () => {
         <td>
           {entry.keysetKind === "main" && (
             <div className={styles.actions}>
-              {/* TODO(phase3b): enable editing */}
-              <Button type="button" variant="primary" disabled>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!writeEnabled || entry.internal}
+                onClick={() => setEditingEntry(entry)}
+              >
                 {t("keyboardShortcut.edit")}
               </Button>
               {canReset && (
@@ -219,6 +228,12 @@ export const FirefoxKeysSettings = () => {
           </>
         )}
       </CardContent>
+      {editingEntry && (
+        <FirefoxKeyEditor
+          entry={editingEntry}
+          onClose={() => setEditingEntry(null)}
+        />
+      )}
     </Card>
   );
 };

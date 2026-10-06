@@ -851,6 +851,8 @@
         "firefoxKeyFloorpConflict": "Floorp と競合",
         "firefoxKeyFloorpConflictHint": "この組み合わせは Floorp が優先されます。about:keyboard で Firefox 側を調整できます。",
         "firefoxKeyReset": "リセット",
+        "firefoxKeyEditTitle": "Firefox のショートカットを編集",
+        "firefoxKeySaveFailed": "保存に失敗しました: {{error}}",
         "invalidKey": "無効なキーです",
         "invalidKeyDescription": "ほかのキーを選択してください。",
         "noModifier": "修飾キーが選択されていません",
