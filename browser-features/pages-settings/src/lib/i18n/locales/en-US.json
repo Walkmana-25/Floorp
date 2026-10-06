@@ -839,6 +839,8 @@
         "shift": "Shift",
         "keyConflict": "This shortcut is already in use",
         "keyConflictDescription": "Please choose a different shortcut or remove the existing one first.",
+        "firefoxKeyConflict": "Conflicts with Firefox's \"{{label}}\" ({{shortcut}}). Floorp takes priority.",
+        "openAboutKeyboard": "Open about:keyboard",
         "invalidKey": "Invalid key",
         "invalidKeyDescription": "Please select a valid key.",
         "noModifier": "No modifier key selected",

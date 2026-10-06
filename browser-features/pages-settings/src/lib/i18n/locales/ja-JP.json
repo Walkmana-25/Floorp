@@ -839,6 +839,8 @@
         "shift": "Shift",
         "keyConflict": "このショートカットはすでに使用されています",
         "keyConflictDescription": "別のショートカットを選択するか、先に既存のショートカットを削除してください。",
+        "firefoxKeyConflict": "Firefox の「{{label}}」（{{shortcut}}）と競合しています。Floorp が優先されます。",
+        "openAboutKeyboard": "about:keyboard を開く",
         "invalidKey": "無効なキーです",
         "invalidKeyDescription": "ほかのキーを選択してください。",
         "noModifier": "修飾キーが選択されていません",
