@@ -471,6 +471,9 @@ export class KeySyncService {
       command: keyEl.getAttribute("command") ?? "",
       internal: keyEl.getAttribute("internal") === "true",
       reserved: keyEl.getAttribute("reserved") === "true",
+      customized: this.#customKeys
+        ? this.#customKeys.getDefaultKey(id) != null
+        : false,
       label: this.#resolveLabel(doc, keyEl),
       shortcutText: formatXulComboText(combo, IS_MAC),
       canonicalCode: xulComboToCanonicalCode(combo, IS_MAC),

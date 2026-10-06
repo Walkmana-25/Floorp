@@ -31,6 +31,8 @@ export interface FirefoxKeyEntry {
   internal: boolean;
   /** `reserved="true"` keys are interpreted early in the parent process. */
   reserved: boolean;
+  /** True when CustomKeys holds a stored default, i.e. the user customized it. */
+  customized: boolean;
   /** Best-effort display name resolved from command / menuitem / id. */
   label: string;
   /** Human readable combo, e.g. "Ctrl+Shift+T" (formatXulComboText). */
