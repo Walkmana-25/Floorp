@@ -26,6 +26,7 @@ export const ShortcutEditor = ({
   initialShortcut,
   existingShortcuts,
   actionId,
+  firefoxKeys: firefoxKeysOverride,
 }: ShortcutEditorProps) => {
   const { t } = useTranslation();
   const [shortcut, setShortcut] = useState<ShortcutConfig>(
@@ -46,7 +47,8 @@ export const ShortcutEditor = ({
     useState<FirefoxKeyEntry | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { keys: firefoxKeys } = useFirefoxKeys();
+  const hookResult = useFirefoxKeys();
+  const firefoxKeys = firefoxKeysOverride ?? hookResult.keys;
 
   const handleSave = async () => {
     if (saving || !shortcut.key || error) return;

@@ -15,6 +15,12 @@ export interface ShortcutEditorProps {
   initialShortcut: ShortcutConfig | null;
   existingShortcuts: ShortcutConfig[];
   actionId: string;
+  /**
+   * Firefox live key entries used for conflict warnings.
+   * When omitted, the component loads them via useFirefoxKeys().
+   * Primarily for testing — pass a fixed list to avoid RPC dependencies.
+   */
+  firefoxKeys?: FirefoxKeyEntry[];
 }
 
 export interface FirefoxKeyEditorProps {
