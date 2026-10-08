@@ -25,6 +25,7 @@ export const useFirefoxKeys = (): FirefoxKeysState => {
 
   useEffect(() => {
     let cancelled = false;
+    let receivedPush = false;
 
     const load = async () => {
       try {
@@ -33,7 +34,9 @@ export const useFirefoxKeys = (): FirefoxKeysState => {
           keySync.isWriteEnabled(),
         ]);
         if (cancelled) return;
-        setKeys(entries);
+        if (!receivedPush) {
+          setKeys(entries);
+        }
         setWriteEnabled(canWrite);
       } catch (error) {
         console.error(
@@ -52,6 +55,8 @@ export const useFirefoxKeys = (): FirefoxKeysState => {
     let unsubscribe: (() => void) | null = null;
     try {
       unsubscribe = keySync.subscribe((nextKeys) => {
+        if (cancelled) return;
+        receivedPush = true;
         setKeys(nextKeys);
       });
     } catch (error) {

@@ -83,7 +83,7 @@ function escapeAttributeValue(value: string): string {
 export class KeySyncService {
   #mirror = new Map<string, FirefoxKeyEntry>();
   #windowStates = new Map<Window, KeySyncWindowState>();
-  /** Keyset elements that already have an attribute observer attached. */
+  /** Keyset elements that already have a key-change observer attached. */
   #observedKeysets = new WeakSet<Element>();
   #listeners: KeySyncChangeListener[] = [];
   #customKeys: CustomKeysModule | null = null;
@@ -359,7 +359,7 @@ export class KeySyncService {
     this.#refreshFromWindow(win);
   }
 
-  /** Attach attribute observers to every keyset that is not observed yet. */
+  /** Attach key-change observers to every keyset that is not observed yet. */
   #observeKeysets(
     win: Window,
     observers: MutationObserver[],
@@ -377,8 +377,10 @@ export class KeySyncService {
       const observer = new win.MutationObserver(attributeCallback);
       observer.observe(keyset, {
         attributes: true,
+        childList: true,
         attributeFilter: ["key", "keycode", "modifiers"],
-        // Key attribute changes happen on the <key> children, not the keyset.
+        // Key attribute and child-list changes happen on the <key> children,
+        // not the keyset itself.
         subtree: true,
       });
       observers.push(observer);
@@ -406,7 +408,7 @@ export class KeySyncService {
   }
 
   /**
-   * Re-read every key element of the window and merge entries into the
+   * Re-read every key element of the window and reconcile it with the
    * mirror (same id across windows is assumed identical, last write wins).
    * Listeners are notified only when the resulting snapshot actually changed.
    */
@@ -416,6 +418,7 @@ export class KeySyncService {
       return;
     }
     const before = JSON.stringify(this.getKeys());
+    const currentIds = new Set<string>();
     for (const keyEl of doc.querySelectorAll("keyset[id] > key")) {
       const keyset = keyEl.parentElement;
       if (!keyset || !keyset.id) {
@@ -428,8 +431,37 @@ export class KeySyncService {
         continue;
       }
       const entry = this.#buildEntry(keyEl, doc, keysetKindForId(keyset.id));
+      currentIds.add(entry.id);
       this.#mirror.set(entry.id, entry);
     }
+
+    // A window's removal must not discard a key still provided by another
+    // attached window. Check the live documents instead of assuming that
+    // mirror ids are uniquely owned.
+    const otherWindowIds = new Set<string>();
+    for (const otherWin of this.#windowStates.keys()) {
+      if (otherWin === win) {
+        continue;
+      }
+      try {
+        for (const keyEl of otherWin.document.querySelectorAll(
+          "keyset[id] > key",
+        )) {
+          if (keyEl.id) {
+            otherWindowIds.add(keyEl.id);
+          }
+        }
+      } catch (_error) {
+        // The other window may be going away.
+      }
+    }
+
+    for (const id of Array.from(this.#mirror.keys())) {
+      if (!currentIds.has(id) && !otherWindowIds.has(id)) {
+        this.#mirror.delete(id);
+      }
+    }
+
     const after = JSON.stringify(this.getKeys());
     if (before !== after) {
       this.#notifyListeners();

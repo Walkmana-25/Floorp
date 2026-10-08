@@ -156,7 +156,6 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
 
       setCode(recorded);
       setIsRecording(false);
-      checkConflicts(modifiers, normalizeKeyCode(recorded));
     };
 
     if (isRecording) {
@@ -171,10 +170,10 @@ export const FirefoxKeyEditor = ({ entry, onClose }: FirefoxKeyEditorProps) => {
   }, [isRecording, modifiers]);
 
   useEffect(() => {
-    if (code) {
-      checkConflicts(modifiers, normalizeKeyCode(code));
-    }
-  }, [modifiers]);
+    checkConflicts(modifiers, normalizeKeyCode(code));
+    // Recheck when asynchronously loaded mirror/config values arrive so the
+    // warning never stays based on stale recording-time values.
+  }, [code, modifiers, keys, config]);
 
   const previewText = (): string => {
     const parts: string[] = [];

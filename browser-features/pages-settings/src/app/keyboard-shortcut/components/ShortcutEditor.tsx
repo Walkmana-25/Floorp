@@ -96,7 +96,6 @@ export const ShortcutEditor = ({
       }));
       setIsRecording(false);
       checkDuplicate(code);
-      checkFirefoxConflict(shortcut.modifiers, normalizeKeyCode(code));
     };
 
     if (isOpen && isRecording) {
@@ -139,12 +138,17 @@ export const ShortcutEditor = ({
   useEffect(() => {
     if (shortcut.key) {
       checkDuplicate(shortcut.key);
+    }
+  }, [shortcut.modifiers]);
+
+  useEffect(() => {
+    if (shortcut.key) {
       checkFirefoxConflict(
         shortcut.modifiers,
         normalizeKeyCode(shortcut.key),
       );
     }
-  }, [shortcut.modifiers]);
+  }, [shortcut.key, shortcut.modifiers, firefoxKeys]);
 
   /**
    * Warns (without blocking) when the recorded combo matches a Firefox
