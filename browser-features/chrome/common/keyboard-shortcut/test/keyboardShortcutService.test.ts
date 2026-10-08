@@ -9,6 +9,8 @@ import {
 } from "../../../test/utils/test_harness.ts";
 import { KeyboardShortcutService } from "../service.ts";
 import {
+  getConfig,
+  isEnabled,
   KEYBOARD_SHORTCUT_CONFIG_PREF,
   KEYBOARD_SHORTCUT_ENABLED_PREF,
   setConfig,
@@ -33,6 +35,8 @@ function withPrefs(fn: () => void): void {
   const savedConfig = hadConfig
     ? Services.prefs.getStringPref(KEYBOARD_SHORTCUT_CONFIG_PREF)
     : null;
+  const savedEnabledState = isEnabled();
+  const savedConfigState = getConfig();
 
   try {
     fn();
@@ -47,6 +51,8 @@ function withPrefs(fn: () => void): void {
     } else {
       Services.prefs.clearUserPref(KEYBOARD_SHORTCUT_CONFIG_PREF);
     }
+    setEnabled(savedEnabledState);
+    setConfig(savedConfigState);
   }
 }
 
@@ -203,7 +209,6 @@ function testReEnableReattaches(): void {
     }
   });
 }
-
 
 // ---------------------------------------------------------------------------
 // Tests — updateConfig lifecycle
