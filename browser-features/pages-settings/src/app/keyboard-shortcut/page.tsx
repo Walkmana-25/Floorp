@@ -44,14 +44,14 @@ export default function Page() {
                     updateConfig={updateConfig}
                 />
 
+                <FirefoxKeysSettings />
+
                 <ShortcutsSettings
                     config={config}
                     addShortcut={addShortcut}
                     updateShortcut={updateShortcut}
                     deleteShortcut={deleteShortcut}
                 />
-
-                <FirefoxKeysSettings />
             </div>
         </div>
     );
