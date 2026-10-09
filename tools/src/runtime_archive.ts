@@ -982,7 +982,7 @@ export async function findSingleTopLevelAppDirectory(
       }.`,
     );
   }
-  if (!candidates[0].includes("Floorp")) {
+  if (!candidates[0].startsWith("Floorp")) {
     throw new Error(
       `Expected a Floorp-branded app directory in DMG; found ${
         JSON.stringify(candidates[0])
